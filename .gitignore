@@ -1,0 +1,14 @@
+# Archivos descargados temporalmente por el script (por seguridad)
+*.deb
+*.tar.gz
+*.sh.bak
+
+# Archivos de logs
+*.log
+
+# Entornos virtuales (por las dudas)
+venv/
+.env
+
+# Carpeta de pruebas
+.pruebas/
