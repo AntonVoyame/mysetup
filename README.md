@@ -1,10 +1,29 @@
 # Linux Development Environment Setup
 
+---
+
+## ⚠️ Requisitos Previos
+
+- Una distribución mínima basada en Debian/Ubuntu.
+- Permisos de superusuario (`sudo`).
+- Conexión a internet.
+- Este script supone la instalación de **i3-setup** de [justaguylinux](https://codeberg.org/justaguylinux/i3-setup), con una terminal **zsh**, **wezterm**, etc.
+
+---
+
+## ⚠️ Configuración de VSCode
+
+El script incluye los comandos necesarios para añadir el repositorio oficial de Microsoft e instalar **Visual Studio Code**.
+
+> **Nota:** Por defecto, el script no instala Visual Studio Code. Si deseas instalarlo automáticamente, por favor utiliza la bandera **--vscode** o **-v**. La instrucción completa debería ser: **./install --vscode**, o **./install -v**.
+
+---
+
 Este repositorio contiene un script de **Bash** automatizado diseñado para aprovisionar y configurar una estación de trabajo de desarrollo sobre **Ubuntu/Debian**.
 
-El objetivo es agilizar la instalación de herramientas esenciales, entornos de virtualización, lenguajes de programación y configuraciones personalizadas (dotfiles) en una instalación limpia del sistema operativo.
+El objetivo es agilizar la instalación de herramientas esenciales, entornos de virtualización, lenguajes de programación y configuraciones personalizadas (dotfiles) en una instalación Debian + i3 (**Windows Manager**).
 
-Antes de este script, suelo correr el script de #justaguylinux sobre una instalación mínima de Debian, el cual instala y configura lo necesario para tener un WM operativo. Este script es solo un complemento personal.
+Suelo correr el script de [justaguylinux](https://codeberg.org/justaguylinux/i3-setup) sobre una instalación mínima de Debian, el cual instala y configura lo necesario para tener un WM operativo. Este script es solo un complemento personal, con el objetivo de responder a mi workflow y gusto personal.
 
 ## 🚀 Características
 
@@ -14,7 +33,7 @@ El script `install.sh` realiza las siguientes tareas de manera secuencial:
 
 - Actualización completa del sistema (`apt update && upgrade`).
 - Instalación de herramientas de compilación (`build-essential`, `gcc`, `make`, `cmake`).
-- Utilidades de línea de comandos: `curl`, `git`, `ripgrep`, `fd-find`, `xclip`, `unzip`.
+- Utilidades de línea de comandos: `curl`, `git`, `ripgrep`, `fd-find`, `xclip`, `unzip`, `ncdu`.
 
 ### 2. Virtualización (KVM/QEMU)
 
@@ -25,7 +44,7 @@ El script `install.sh` realiza las siguientes tareas de manera secuencial:
 
 - Gestión de versiones de Python con **Pyenv**.
 - Gestión de entornos virtuales y variables de entorno por directorio con **Direnv**.
-- Herramientas adicionales: `pipx`, `poetry` (vía pipx).
+- Herramientas adicionales: `pipx`.
 
 ### 4. Herramientas de Desarrollo y Productividad
 
@@ -36,7 +55,7 @@ El script `install.sh` realiza las siguientes tareas de manera secuencial:
 
 ### 5. Aplicaciones de Terceros
 
-- Obsidian (Última versión oficial).
+- Obsidian.
 - Zoom.
 - Dropbox.
 - Surfshark VPN.
@@ -46,29 +65,12 @@ El script `install.sh` realiza las siguientes tareas de manera secuencial:
 - El script detecta automáticamente una carpeta `./dotfiles` en la raíz del repositorio.
 - Copia y reemplaza recursivamente las configuraciones en el `$HOME` del usuario, respetando la estructura de directorios.
 
----
-
-## ⚠️ Configuración de VSCode
-
-El script incluye los comandos necesarios para añadir el repositorio oficial de Microsoft e instalar **Visual Studio Code**.
-
-> **Nota:** Por defecto, la sección de instalación de VSCode se encuentra **comentada/deshabilitada** dentro del script `install.sh`. Si deseas instalar VSCode automáticamente, por favor edita el archivo y descomenta las líneas correspondientes en la sección "VSCODE".
-
----
-
-## 📋 Requisitos Previos
-
-- Una distribución basada en Debian/Ubuntu.
-- Permisos de superusuario (`sudo`).
-- Conexión a internet.
-- (Opcional) Una shell `zsh` instalada previamente es recomendada, ya que el script inyecta configuraciones en `~/.zshrc`.
-
 ## 🛠️ Instalación y Uso
 
 1. **Clonar el repositorio:**
 
    ```bash
-   git clone [https://github.com/AntonVoyame/mysetup](https://github.com/AntonVoyame/mysetup.git)
+   git clone https://github.com/AntonVoyame/mysetup
    cd mysetup
    chmod +x install.sh
    ./install.sh

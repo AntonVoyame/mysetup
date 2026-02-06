@@ -1,0 +1,306 @@
+#!/bin/bash
+#
+# Script de instalación y configuración de entorno de trabajo.
+# Basado en Debian/Ubuntu.
+#
+# Adhiere a Google Shell Style Guide y Principios SRE.
+
+# --- CONFIGURACIÓN DE SEGURIDAD ---
+set -euo pipefail
+
+# --- CONSTANTES Y VARIABLES ---
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
+readonly LOG_FILE="$HOME/install_log.txt"
+readonly DOTFILES_DIR="./dotfiles"
+
+# Variables de control (Flags)
+# Por defecto están en 0 (falso/desactivado)
+INSTALL_VSCODE=0
+
+# --- FUNCIONES DE UTILIDAD ---
+
+function usage() {
+  echo -e "${BLUE}Uso: $0 [opciones]${NC}"
+  echo "Opciones:"
+  echo "  -v, --vscode    Instala Visual Studio Code (Microsoft)"
+  echo "  -h, --help      Muestra este mensaje de ayuda"
+  echo ""
+  echo "Ejemplo:"
+  echo "  $0 --vscode     # Instala todo el sistema base + VSCode"
+  exit 1
+}
+
+function log() {
+  local timestamp
+  timestamp=$(date +'%Y-%m-%d %H:%M:%S')
+  echo -e "${BLUE}[$timestamp] INFO:${NC} $1"
+}
+
+function error() {
+  local timestamp
+  timestamp=$(date +'%Y-%m-%d %H:%M:%S')
+  echo -e "${RED}[$timestamp] ERROR:${NC} $1" >&2
+}
+
+function success() {
+  echo -e "${GREEN}[OK] $1 completado.${NC}"
+}
+
+function check_root() {
+  if ! sudo -v; then
+    error "Este script requiere privilegios sudo. Por favor verifica tus credenciales."
+    exit 1
+  fi
+}
+
+# --- FUNCIONES DE INSTALACIÓN ---
+
+function install_core() {
+  log "Actualizando sistema e instalando dependencias CORE"
+  sudo apt update && sudo apt upgrade -y
+
+  local packages=(
+    build-essential libssl-dev zlib1g-dev libbz2-dev
+    libreadline-dev libsqlite3-dev curl git libncursesw5-dev
+    xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev
+    liblzma-dev make gcc ripgrep fd-find unzip xclip
+    python3-venv python3-pip npm pipx wget
+  )
+
+  sudo apt install -y "${packages[@]}"
+  success "Core instalado"
+}
+
+function install_kvm() {
+  log "Configurando KVM y QEMU"
+  if ! dpkg -l | grep -q qemu-system; then
+    sudo apt install -y qemu-system libvirt-clients libvirt-daemon-system virt-manager
+    sudo systemctl enable --now libvirtd
+    sudo usermod -aG libvirt "$(whoami)"
+    sudo usermod -aG kvm "$(whoami)"
+    success "KVM instalado"
+  else
+    log "KVM ya parece estar instalado. Saltando."
+  fi
+}
+
+function install_vscode() {
+  # Solo proceder si la variable de control es 1 (true)
+  if [[ "$INSTALL_VSCODE" -ne 1 ]]; then
+    return 0
+  fi
+
+  if ! command -v code &>/dev/null; then
+    log "Instalando Visual Studio Code (Oficial)"
+
+    # Prerrequisitos
+    sudo apt install -y wget gpg apt-transport-https
+
+    # Importar llave GPG de Microsoft de forma segura
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor >packages.microsoft.gpg
+    sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+    rm packages.microsoft.gpg
+
+    # Añadir repositorio
+    echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null
+
+    sudo apt update
+    sudo apt install -y code
+    success "VSCode instalado"
+  else
+    log "VSCode ya está instalado."
+  fi
+}
+
+function install_dropbox() {
+  if ! command -v dropbox &>/dev/null; then
+    log "Instalando Dropbox"
+    local deb_file="dropbox.deb"
+    wget -O "$deb_file" "https://www.dropbox.com/download?dl=packages/ubuntu/dropbox_2024.04.17_amd64.deb"
+    sudo apt install -y "./$deb_file"
+    rm "$deb_file"
+    success "Dropbox instalado"
+  else
+    log "Dropbox ya instalado."
+  fi
+}
+
+function install_obsidian() {
+  if ! command -v obsidian &>/dev/null; then
+    log "Instalando Obsidian"
+    local obsidian_url
+    local deb_file="obsidian.deb"
+
+    obsidian_url=$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | grep "browser_download_url.*amd64.deb" | cut -d : -f 2,3 | tr -d \")
+
+    if [[ -n "$obsidian_url" ]]; then
+      wget -O "$deb_file" "$obsidian_url"
+      sudo apt install -y "./$deb_file"
+      rm "$deb_file"
+      success "Obsidian instalado"
+    else
+      error "No se pudo obtener la URL de Obsidian."
+    fi
+  else
+    log "Obsidian ya instalado."
+  fi
+}
+
+function install_zoom() {
+  if ! dpkg -l | grep -q zoom; then
+    log "Instalando Zoom"
+    local deb_file="zoom_amd64.deb"
+    wget -O "$deb_file" https://zoom.us/client/latest/zoom_amd64.deb
+    sudo apt install -y "./$deb_file"
+    rm "$deb_file"
+    success "Zoom instalado"
+  else
+    log "Zoom ya instalado."
+  fi
+}
+
+function install_surfshark() {
+  if ! command -v surfshark-vpn &>/dev/null; then
+    log "Instalando Surfshark VPN"
+    curl -f https://downloads.surfshark.com/linux/debian-install.sh --output surfshark-install.sh
+    sh surfshark-install.sh
+    rm surfshark-install.sh
+    success "Surfshark instalado"
+  else
+    log "Surfshark ya instalado."
+  fi
+}
+
+function configure_shell_environment() {
+  log "Configurando entorno Shell (ZSH, Pyenv, Direnv, Starship)"
+
+  if [[ ! -f "$HOME/.zshrc" ]]; then
+    touch "$HOME/.zshrc"
+  fi
+
+  if [[ ! -d "$HOME/.pyenv" ]]; then
+    curl https://pyenv.run | bash
+  else
+    log "Pyenv ya existe."
+  fi
+
+  sudo apt install -y direnv
+  if ! grep -q "direnv hook zsh" "$HOME/.zshrc"; then
+    echo 'eval "$(direnv hook zsh)"' >>"$HOME/.zshrc"
+    log "Hook de Direnv agregado a .zshrc"
+  fi
+
+  if ! command -v starship &>/dev/null; then
+    curl -sS https://starship.rs/install.sh | sh -s -- -y
+  fi
+}
+
+function install_neovim_lazyvim() {
+  log "Instalando Neovim y LazyVim"
+
+  curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+  sudo rm -rf /opt/nvim*
+  sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+  sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+  rm nvim-linux-x86_64.tar.gz
+
+  if [[ -d "$HOME/.config/nvim" ]]; then
+    if [[ -d "$HOME/.config/nvim/.git" ]]; then
+      log "Configuración de nvim detectada. Realizando backup."
+      mv "$HOME/.config/nvim" "$HOME/.config/nvim.bak.$(date +%s)"
+    fi
+  fi
+
+  if [[ ! -d "$HOME/.config/nvim" ]]; then
+    git clone https://github.com/LazyVim/starter "$HOME/.config/nvim"
+    rm -rf "$HOME/.config/nvim/.git"
+    success "LazyVim instalado"
+  fi
+}
+
+function install_extras() {
+  log "Instalando extras (Lazygit, Visidata)"
+  sudo apt install -y lazygit
+  pipx ensurepath
+  pipx install visidata --include-deps
+}
+
+function process_dotfiles() {
+  log "Procesando Dotfiles"
+
+  if [[ -d "$DOTFILES_DIR" ]]; then
+    log "Copiando configuraciones generales..."
+    cp -rf "$DOTFILES_DIR/." "$HOME/"
+
+    # Lógica de reemplazo total de wallpaper
+    if [[ -d "$HOME/wallpaper" ]]; then
+      log "Eliminando carpeta wallpaper antigua..."
+      rm -rf "$HOME/wallpaper"
+    fi
+
+    if [[ -d "$DOTFILES_DIR/wallpaper" ]]; then
+      log "Instalando nueva carpeta wallpaper..."
+      cp -r "$DOTFILES_DIR/wallpaper" "$HOME/"
+    fi
+
+    success "Dotfiles aplicados."
+  else
+    error "Carpeta 'dotfiles' no encontrada en $(pwd). Saltando configuración."
+  fi
+}
+
+# --- EJECUCIÓN PRINCIPAL ---
+
+function main() {
+  # Procesamiento de argumentos
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+    -v | --vscode)
+      INSTALL_VSCODE=1
+      shift # Mover al siguiente argumento
+      ;;
+    -h | --help)
+      usage
+      ;;
+    *)
+      error "Opción desconocida: $1"
+      usage
+      ;;
+    esac
+  done
+
+  echo -e "${BLUE}=== Iniciando Script de Instalación ===${NC}"
+
+  check_root
+
+  install_core
+  install_kvm
+
+  # Llamada condicional (la función verifica la variable INSTALL_VSCODE)
+  install_vscode
+
+  install_dropbox
+  install_obsidian
+  install_zoom
+  install_surfshark
+
+  configure_shell_environment
+  install_neovim_lazyvim
+  install_extras
+  process_dotfiles
+
+  echo -e "${BLUE}=== INSTALACIÓN COMPLETADA ===${NC}"
+  echo -e "${YELLOW}Pasos manuales requeridos:${NC}"
+  echo "1. Reinicia el sistema."
+  echo "2. Ejecuta 'zsh'."
+  echo "3. Configura 'sudo surfshark-vpn'."
+  echo "4. Dropbox Login antes de utilizar Obsidian."
+  echo "5. Abrir Neovim para terminar de instalar los paquetes necesarios."
+}
+
+# Ejecutar main pasando todos los argumentos del script ($@)
+main "$@"
