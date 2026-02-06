@@ -27,7 +27,7 @@ Suelo correr el script de [justaguylinux](https://codeberg.org/justaguylinux/i3-
 
 ## 🚀 Características
 
-El script `install.sh` realiza las siguientes tareas de manera secuencial:
+El script `install` realiza las siguientes tareas de manera secuencial:
 
 ### 1. Core & System Utilities
 
@@ -72,6 +72,6 @@ El script `install.sh` realiza las siguientes tareas de manera secuencial:
    ```bash
    git clone https://github.com/AntonVoyame/mysetup
    cd mysetup
-   chmod +x install.sh
-   ./install.sh
+   chmod +x install
+   ./install
    ```
