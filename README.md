@@ -69,20 +69,20 @@ El script `install` realiza las siguientes tareas de manera secuencial:
 
 #### 🚀 Aplicaciones y Herramientas
 
-| Atajo                       | Acción                         | Comando                         |
-| :-------------------------- | :----------------------------- | :------------------------------ |
-| `Super` + `Enter`           | Terminal (Wezterm)             | `wezterm`                       |
-| `Super` + `Shift` + `Enter` | Terminal Scratchpad            | `scripts/scratchpad`            |
-| `Super` + `b`               | Navegador (Brave)              | `brave-browser`                 |
-| `Super` + `Shift` + `b`     | Navegador Privado              | `brave-browser -private-window` |
-| `Super` + `f`               | Gestor de Archivos (Thunar)    | `thunar`                        |
-| `Super` + `n`               | Editor de Texto (Geany)        | `geany`                         |
-| `Super` + `d`               | Discord                        | `Discord`                       |
-| `Super` + `o`               | Obsidian (Notas)               | `obsidian`                      |
-| `Super` + `g`               | Dropbox (Iniciar sync)         | `dropbox start`                 |
-| `Super` + `v`               | Mezclador de Audio             | `pulsemixer`                    |
-| `Super` + `z`               | Menú de Aplicaciones (Rofi)    | `rofi ...`                      |
-| `Super` + `k`               | Script de Ayuda (⚠️ Conflicto) | `scripts/help`                  |
+| Atajo                       | Acción                         | Comando                    |
+| :-------------------------- | :----------------------------- | :------------------------- |
+| `Super` + `Enter`           | Terminal (Wezterm)             | `wezterm`                  |
+| `Super` + `Shift` + `Enter` | Terminal Scratchpad            | `scripts/scratchpad`       |
+| `Super` + `b`               | Navegador (Brave)              | `brave-browser`            |
+| `Super` + `Shift` + `b`     | Navegador Privado              | `brave-browser --incognito |
+| `Super` + `f`               | Gestor de Archivos (Thunar)    | `thunar`                   |
+| `Super` + `n`               | Editor de Texto (Geany)        | `geany`                    |
+| `Super` + `d`               | Discord                        | `Discord`                  |
+| `Super` + `o`               | Obsidian (Notas)               | `obsidian`                 |
+| `Super` + `g`               | Dropbox (Iniciar sync)         | `dropbox start`            |
+| `Super` + `v`               | Mezclador de Audio             | `pulsemixer`               |
+| `Super` + `z`               | Menú de Aplicaciones (Rofi)    | `rofi ...`                 |
+| `Super` + `k`               | Script de Ayuda (⚠️ Conflicto) | `scripts/help`             |
 
 #### 🖥️ Sistema y Capturas
 
