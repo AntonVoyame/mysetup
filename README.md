@@ -65,6 +65,76 @@ El script `install` realiza las siguientes tareas de manera secuencial:
 - El script detecta automáticamente una carpeta `./dotfiles` en la raíz del repositorio.
 - Copia y reemplaza recursivamente las configuraciones en el `$HOME` del usuario, respetando la estructura de directorios.
 
+### 7. Keybindings
+
+#### Atajos y Herramientas
+
+Atajo,Acción,Comando
+Super + Enter,Terminal (Wezterm),wezterm
+Super + Shift + Enter,Terminal Scratchpad,scripts/scratchpad
+Super + b,Navegador (Brave),brave-browser
+Super + Shift + b,Navegador Privado,brave-browser -private-window
+Super + f,Gestor de Archivos (Thunar),thunar
+Super + n,Editor de Texto (Geany),geany
+Super + d,Discord,Discord
+Super + o,Obsidian (Notas),obsidian
+Super + g,Dropbox (Iniciar sync),dropbox start
+Super + v,Mezclador de Audio,pulsemixer
+Super + z,Menú de Aplicaciones (Rofi),rofi ...
+Super + t,Script de Ayuda,scripts/help
+
+#### Sistema y Capturas
+
+Atajo,Acción,Comando
+Super + x,Menú Apagar/Reiniciar,scripts/power
+Super + Shift + q,Salir de i3 (Exit),i3-msg exit
+Super + Shift + r,Reiniciar i3 (Restart),i3-msg restart
+Super + Shift + c,Recargar config i3,i3-msg reload
+Super + Esc,Recargar config sxhkd,pkill ... sxhkd
+Super + p,Captura Pantalla Completa,flameshot full
+Super + Shift + p,Captura Región,flameshot gui
+
+#### Gestión de Ventanas y Layouts
+
+Atajo,Acción,Descripción
+Super + q,Cerrar Ventana,Kill window
+Super + Alt + f,Pantalla Completa,Toggle Fullscreen
+Super + Shift + Espacio,Flotante,Toggle Floating
+Super + Ctrl + Espacio,Alternar Foco,Tiling / Floating
+Super + s,Layout: Apilado,Stacking
+Super + w,Layout: Pestañas,Tabbed
+Super + t,Layout: Dividido,Split Toggle
+Super + Ctrl + Flechas,Redimensionar,Resize grow/shrink
+
+#### Navegación
+
+Atajo,Acción,Comando
+Super + h,Foco Izquierda,focus left
+Super + j,Foco Abajo,focus down
+Super + k,Foco Arriba,focus up
+Super + l,Foco Derecha,focus right
+Super + Shift + h,Mover Ventana Izquierda,move left
+Super + Shift + j,Mover Ventana Abajo,move down
+Super + Shift + k,Mover Ventana Arriba,move up
+Super + Shift + l,Mover Ventana Derecha,move right
+Super + 0-9,Ir al Espacio de Trabajo,workspace N
+Super + Shift + 0-9,Mover a Espacio de Trabajo,move ... to workspace N
+
+#### Scratchpad
+
+Atajo,Acción,Detalle
+Super + - (Menos),Enviar a Scratchpad,Oculta la ventana actual
+Super + = (Igual),Mostrar Scratchpad,Muestra/Cicla ventanas ocultas
+Super + Shift + =,Sacar de Scratchpad,"Vuelve a hacerla ""tiling"" "
+
+#### Audio y Brillo
+
+Atajo,Acción,Comando
+Super + F12,Subir Volumen,scripts/changevolume up
+Super + F11,Bajar Volumen,scripts/changevolume down
+Super + F10,Mute,scripts/changevolume mute
+Teclas Multimedia,Volumen / Brillo,pamixer / xbacklight
+
 ## 🛠️ Instalación y Uso
 
 1. **Clonar el repositorio:**

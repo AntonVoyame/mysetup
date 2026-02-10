@@ -68,7 +68,7 @@ function install_core() {
     libreadline-dev libsqlite3-dev curl git libncursesw5-dev
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev
     liblzma-dev make gcc ripgrep fd-find unzip xclip
-    python3-venv python3-pip npm pipx wget
+    python3-venv python3-pip npm pipx wget ncdu
   )
 
   sudo apt install -y "${packages[@]}"
