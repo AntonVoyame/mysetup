@@ -29,9 +29,10 @@ Suelo correr el script de [justaguylinux](https://codeberg.org/justaguylinux/i3-
 
 ## ⚠️ Modificaciones a la config de #justaguylinux
 
-1 - Fixes a polybar: quitamos el indicador de "caps lock" y de "leng de teclado".
-2 - Fixes a polybar: agregamos el indicador de batería {BAT} y de red {NET}.
-3 - Quitamos el bloqueo de "wpa_supplicant" y otorgamos el control a NetworkManager {config de redes wifi con "nmtui"}.
+  1- Fixes a polybar: quitamos el indicador de "caps lock" y de "leng de teclado".
+  2- Fixes a polybar: agregamos el indicador de batería {BAT} y de red {NET}.
+  3- Quitamos el bloqueo de "wpa_supplicant" y otorgamos el control a NetworkManager {config de redes wifi con "nmtui"}.
+
 ---
 
 ## 🚀 Características
