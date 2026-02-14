@@ -25,6 +25,15 @@ El objetivo es agilizar la instalación de herramientas esenciales, entornos de 
 
 Suelo correr el script de [justaguylinux](https://codeberg.org/justaguylinux/i3-setup) sobre una instalación mínima de Debian, el cual instala y configura lo necesario para tener un WM operativo. Este script es solo un complemento personal, con el objetivo de responder a mi workflow y gusto personal.
 
+---
+
+## ⚠️ Modificaciones a la config de #justaguylinux
+
+1 - Fixes a polybar: quitamos el indicador de "caps lock" y de "leng de teclado".
+2 - Fixes a polybar: agregamos el indicador de batería {BAT} y de red {NET}.
+3 - Quitamos el bloqueo de "wpa_supplicant" y otorgamos el control a NetworkManager {config de redes wifi con "nmtui"}.
+---
+
 ## 🚀 Características
 
 El script `install` realiza las siguientes tareas de manera secuencial:

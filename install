@@ -68,7 +68,9 @@ function install_core() {
     libreadline-dev libsqlite3-dev curl git libncursesw5-dev
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev
     liblzma-dev make gcc ripgrep fd-find unzip xclip
-    python3-venv python3-pip npm pipx wget ncdu
+    python3-venv python3-pip npm pipx wget
+    # Sistemas
+    ncdu libimage-exiftool-perl imagemagick rsyslog
   )
 
   sudo apt install -y "${packages[@]}"
@@ -293,13 +295,20 @@ function main() {
   install_extras
   process_dotfiles
 
+  echo -e "${BLUE}=== Iniciando configuración de red ===${NC}"
+
+  sudo systemctl stop networking
+  sudo systemctl disable networking
+  sudo systemctl disable wpa_supplicant
+
   echo -e "${BLUE}=== INSTALACIÓN COMPLETADA ===${NC}"
   echo -e "${YELLOW}Pasos manuales requeridos:${NC}"
   echo "1. Reinicia el sistema."
-  echo "2. Ejecuta 'zsh'."
-  echo "3. Configura 'sudo surfshark-vpn'."
-  echo "4. Dropbox Login antes de utilizar Obsidian."
-  echo "5. Abrir Neovim para terminar de instalar los paquetes necesarios."
+  echo "2. Conectate al wifi con "nmtui""
+  echo "3. Ejecuta 'zsh'."
+  echo "4. Configura 'sudo surfshark-vpn'."
+  echo "5. Dropbox Login antes de utilizar Obsidian."
+  echo "6. Abrir Neovim para terminar de instalar los paquetes necesarios."
 }
 
 # Ejecutar main pasando todos los argumentos del script ($@)
