@@ -15,7 +15,7 @@
 
 El script incluye los comandos necesarios para añadir el repositorio oficial de Microsoft e instalar **Visual Studio Code**.
 
-> **Nota:** Por defecto, el script no instala Visual Studio Code. Si deseas instalarlo automáticamente, por favor utiliza la bandera **--vscode** o **-v**. La instrucción completa debería ser: **./install --vscode**, o **./install -v**.
+> **Nota:** Por defecto, el script no instala Visual Studio Code. Si deseas instalarlo automáticamente, por favor utiliza la flag **--vscode** o **-v**. La instrucción completa debería ser: **./install --vscode**, o **./install -v**.
 
 ---
 
