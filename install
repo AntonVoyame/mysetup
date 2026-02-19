@@ -341,6 +341,6 @@ function main() {
 
 # Trap para asegurar que si se corta el script, se intente mostrar algo,
 # aunque main maneja el flujo normal.
-trap "echo 'Script interrumpido o finalizado.'" EXIT
+trap "echo 'Script finalizado.'" EXIT
 
 main "$@"
