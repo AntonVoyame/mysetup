@@ -1,11 +1,10 @@
 #!/bin/bash
 #
-# Script de instalación y configuración de entorno de trabajo (Refactorizado).
+# Script de instalación y configuración de entorno de trabajo.
 # Basado en Debian/Ubuntu.
 # Adhiere a Google Shell Style Guide y Principios SRE.
 
 # --- CONFIGURACIÓN DE SEGURIDAD ---
-# Nota: No usamos set -e global para permitir el reporte final de errores.
 set -uo pipefail
 
 # --- CONSTANTES Y VARIABLES ---
@@ -13,7 +12,7 @@ readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
 readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
-readonly NC='\033[0m' # No Color
+readonly NC='\033[0m'
 readonly LOG_FILE="$HOME/install_log.txt"
 readonly DOTFILES_DIR="./dotfiles"
 

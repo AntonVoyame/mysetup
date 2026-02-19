@@ -12,3 +12,6 @@ venv/
 
 # Carpeta de pruebas
 .pruebas/
+
+# Documento de apps
+apps.txt 
