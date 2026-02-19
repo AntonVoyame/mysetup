@@ -150,12 +150,25 @@ function group_gui_apps() {
   fi
 
   # Obsidian
-  if ask_user "¿Instalar Obsidian?"; then
-    if ! command -v obsidian &>/dev/null; then
-      # Lógica compleja para obtener URL, envuelta en subshell para capturar errores
-      local cmd_obsidian='url=$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | grep "browser_download_url.*amd64.deb" | cut -d : -f 2,3 | tr -d \") && \
-        wget -O obsidian.deb "$url" && sudo apt install -y ./obsidian.deb && rm obsidian.deb'
-      run_install "Obsidian" "$cmd_obsidian"
+
+  if ask_user "¿Instalar Obsidian (vía Flatpak)?"; then
+    log "Configurando motor Flatpak para Obsidian..."
+
+    # 1. Asegurar que el gestor Flatpak esté instalado
+    if ! command -v flatpak &>/dev/null; then
+      run_install "Gestor Flatpak" "sudo apt install -y flatpak"
+    fi
+
+    # 2. Asegurar que el repositorio oficial Flathub esté activo
+    local cmd_flathub="sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+    run_install "Repositorio Flathub" "$cmd_flathub"
+
+    # 3. Instalar Obsidian de forma desatendida
+    if ! flatpak list | grep -q md.obsidian.Obsidian; then
+      local cmd_obsidian_flatpak="sudo flatpak install -y flathub md.obsidian.Obsidian"
+      run_install "Obsidian (Flatpak)" "$cmd_obsidian_flatpak"
+    else
+      log "Obsidian (Flatpak) ya está instalado."
     fi
   fi
 
@@ -172,7 +185,15 @@ function group_network_vpn() {
 
   if ask_user "¿Instalar Surfshark VPN?"; then
     if ! command -v surfshark-vpn &>/dev/null; then
-      run_install "Surfshark" "curl -f https://downloads.surfshark.com/linux/debian-install.sh --output surfshark-install.sh && sh surfshark-install.sh && rm surfshark-install.sh"
+      # Bypass del script oficial para cumplir con estándares modernos de APT (evita apt-key)
+      local cmd_surfshark="sudo mkdir -p /etc/apt/keyrings && \
+        wget -qO- https://ocean.surfshark.com/debian/pubkey.gpg | sudo tee /etc/apt/keyrings/surfshark.asc > /dev/null && \
+        echo 'deb [signed-by=/etc/apt/keyrings/surfshark.asc] https://ocean.surfshark.com/debian stretch main' | sudo tee /etc/apt/sources.list.d/surfshark.list > /dev/null && \
+        sudo apt update && sudo apt install -y surfshark-vpn"
+
+      run_install "Surfshark VPN" "$cmd_surfshark"
+    else
+      log "Surfshark ya instalado."
     fi
   fi
 }
@@ -227,12 +248,16 @@ function group_dotfiles() {
 
   if ask_user "¿Aplicar Dotfiles desde $DOTFILES_DIR?"; then
     if [[ -d "$DOTFILES_DIR" ]]; then
-      local cmd_dot="cp -rf \"$DOTFILES_DIR/.\" \"$HOME/\""
+      local cmd_dot=""
 
-      # Gestión de Wallpaper
+      # Prevención de fusión (Merge): Borrar destino antes de copiar
       if [[ -d "$DOTFILES_DIR/wallpaper" ]]; then
-        cmd_dot="$cmd_dot && rm -rf \"$HOME/wallpaper\" && cp -r \"$DOTFILES_DIR/wallpaper\" \"$HOME/\""
+        # Eliminamos versiones en minúscula y mayúscula por si acaso
+        cmd_dot="rm -rf \"$HOME/wallpaper\" \"$HOME/Wallpaper\" && "
       fi
+
+      # Copia recursiva preservando atributos (-a)
+      cmd_dot="${cmd_dot}cp -a \"$DOTFILES_DIR/.\" \"$HOME/\""
 
       run_install "Dotfiles Apply" "$cmd_dot"
     else
