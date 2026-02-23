@@ -183,36 +183,30 @@ function group_gui_apps() {
 function group_network_security() {
   log "=== Grupo: Red, VPN y Seguridad ==="
 
-  # 1. Herramientas Base de Seguridad y Acceso Remoto
   if ask_user "¿Instalar y configurar SSH, Fail2ban, UFW y sshpass?"; then
     run_install "Paquetes de Seguridad" "sudo apt install -y openssh-server fail2ban ufw sshpass"
 
-    # Configuración de UFW (Firewall) - Reglas seguras por defecto
     local cmd_ufw="sudo ufw default deny incoming && \
                    sudo ufw default allow outgoing && \
                    sudo ufw allow ssh/tcp && \
                    sudo ufw --force enable"
     run_install "Configuración UFW" "$cmd_ufw"
-
-    # Habilitar servicios críticos
     run_install "Servicios SSH/Fail2ban" "sudo systemctl enable --now ssh fail2ban"
   fi
 
-  # 2. VPN Comercial (Paquetes nativos en lugar de la App privativa)
-  if ask_user "¿Instalar soporte nativo para OpenVPN/WireGuard?"; then
-    run_install "OpenVPN & WireGuard" "sudo apt install -y openvpn wireguard network-manager-openvpn resolvconf"
-    log "Nota: Descarga tus archivos .ovpn o .conf desde la web de tu VPN y úsalos con NetworkManager."
-  fi
-
-  # 3. Tailscale
+  # 2. Tailscale (Movido arriba para garantizar resolución DNS limpia)
   if ask_user "¿Instalar Tailscale (Mesh VPN)?"; then
     if ! command -v tailscale &>/dev/null; then
-      # Tailscale provee un script de instalación muy robusto y seguro
       run_install "Tailscale" "curl -fsSL https://tailscale.com/install.sh | sh"
-      log "Tailscale instalado. Ejecuta 'sudo tailscale up' al finalizar para autenticarte."
+      log "Tailscale instalado. Ejecuta 'sudo tailscale up' al finalizar."
     else
       log "Tailscale ya está instalado."
     fi
+  fi
+
+  # 3. VPN Nativa (Sin resolvconf para no romper el DNS al vuelo)
+  if ask_user "¿Instalar soporte nativo para OpenVPN/WireGuard?"; then
+    run_install "OpenVPN & WireGuard" "sudo apt install -y openvpn wireguard network-manager-openvpn"
   fi
 }
 
@@ -277,10 +271,10 @@ function group_dev_tools() {
     fi
   fi
 
-  if ask_user "¿Instalar Extras (Lazygit, Visidata)?"; then
+  if ask_user "¿Instalar Extras (Lazygit, Visidata, Zathura)?"; then
     run_install "Lazygit" "sudo apt install -y lazygit"
     run_install "Visidata" "pipx ensurepath && pipx install visidata --include-deps"
-    run_install "Zathura + MuPDF" "sudo apt install zathura zathura-pdf-poppler"
+    run_install "Zathura + Poppler" "sudo apt install zathura zathura-pdf-poppler"
   fi
 }
 
@@ -289,24 +283,38 @@ function group_dotfiles() {
 
   if ask_user "¿Aplicar Dotfiles desde $DOTFILES_DIR?"; then
     if [[ -d "$DOTFILES_DIR" ]]; then
-      # Asegurar que rsync está instalado para sincronización exacta
+      # Asegurar que rsync está instalado
       sudo apt install -y rsync &>/dev/null
 
-      local cmd_dot=""
+      # 1. Definir la ruta exacta del sistema destino
+      local target_wallpaper_dir="$HOME/.config/i3/wallpaper"
 
-      # 1. Sincronización exacta de Wallpaper (Elimina lo que no esté en origen)
-      if [[ -d "$DOTFILES_DIR/wallpaper" ]]; then
-        cmd_dot="mkdir -p \"$HOME/wallpaper\" && rsync -a --delete \"$DOTFILES_DIR/wallpaper/\" \"$HOME/wallpaper/\" && "
-      fi
+      # 2. Destrucción quirúrgica: Borrar la carpeta original de i3 completamente
+      local cmd_dot="rm -rf \"$target_wallpaper_dir\" && "
 
-      # 2. Copia del resto de dotfiles (ignorando la carpeta wallpaper para no duplicar procesos)
-      cmd_dot="${cmd_dot}rsync -a --exclude='wallpaper' \"$DOTFILES_DIR/\" \"$HOME/\""
+      # 3. Sincronización: Copiar todo el árbol de dotfiles.
+      # Como borramos la carpeta destino antes, rsync/cp pondrá tu carpeta nueva limpia.
+      cmd_dot="${cmd_dot}rsync -a \"$DOTFILES_DIR/\" \"$HOME/\""
 
-      run_install "Dotfiles Sincronización (rsync)" "$cmd_dot"
+      run_install "Dotfiles (Sincronización exacta i3)" "$cmd_dot"
     else
       error "Directorio dotfiles no encontrado. Saltando."
       FAILED_PACKAGES+=("Dotfiles (Dir not found)")
     fi
+  fi
+}
+
+function group_cleanup() {
+  log "=== Grupo: Limpieza del Sistema ==="
+
+  if ask_user "¿Ejecutar limpieza final (remover thunar, micro, xarchiver y dependencias huérfanas)?"; then
+    # El uso de '|| true' en el primer comando evita que el bloque falle
+    # si los programas ya estaban desinstalados previamente.
+    local cmd_clean="sudo apt remove -y thunar micro xarchiver || true && \
+                     sudo apt autoremove -y && \
+                     sudo apt clean"
+
+    run_install "Limpieza de paquetes y dependencias" "$cmd_clean"
   fi
 }
 
@@ -375,13 +383,15 @@ function main() {
     run_install "Network Disable" "sudo systemctl stop networking && sudo systemctl disable networking && sudo systemctl disable wpa_supplicant"
   fi
 
+  group_cleanup
+
   print_summary
 
   echo -e "${YELLOW}Pasos manuales requeridos:${NC}"
   echo "1. Reinicia el sistema."
   echo "2. Conectate al wifi con 'nmtui' si desactivaste wpa_supplicant."
   echo "3. Ejecuta 'zsh' para inicializar la shell."
-  echo "4. Finaliza login en Surfshark y en Dropbox, para sincronizar el vault de Obsidian."
+  echo "4. Finaliza login en Dropbox, para sincronizar el vault de Obsidian."
 }
 
 # Trap para asegurar que si se corta el script, se intente mostrar algo,
