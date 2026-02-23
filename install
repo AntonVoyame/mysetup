@@ -313,6 +313,33 @@ function group_dotfiles() {
   fi
 }
 
+function group_browser_hardening() {
+  log "=== Grupo: Hardening de Navegador (Arkenfox) ==="
+
+  if ask_user "¿Instalar y configurar Arkenfox user.js en Firefox?"; then
+    # 1. Aseguramos que Firefox esté instalado (Debian suele usar firefox-esr)
+    sudo apt install -y firefox-esr &>/dev/null || sudo apt install -y firefox &>/dev/null
+
+    # 2. Forzamos la creación del perfil sin abrir ventanas y descargamos el repo
+    local cmd_arkenfox="mkdir -p \"$HOME/.mozilla/firefox\" && \
+      if ! grep -q 'Path=' \"$HOME/.mozilla/firefox/profiles.ini\" 2>/dev/null; then \
+        firefox --headless -CreateProfile \"default\" &>/dev/null || true; \
+      fi && \
+      PROFILE_DIR=\$(find \"$HOME/.mozilla/firefox\" -maxdepth 1 -type d -name \"*.default*\" | head -n 1) && \
+      if [[ -n \"\$PROFILE_DIR\" ]]; then \
+        wget -qO \"\$PROFILE_DIR/user.js\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/user.js\" && \
+        wget -qO \"\$PROFILE_DIR/updater.sh\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/updater.sh\" && \
+        chmod +x \"\$PROFILE_DIR/updater.sh\"; \
+      else \
+        exit 1; \
+      fi"
+
+    if run_install "Arkenfox user.js" "$cmd_arkenfox"; then
+      log "Arkenfox aplicado. Ejecuta ./updater.sh dentro de tu perfil de Firefox para futuras actualizaciones."
+    fi
+  fi
+}
+
 function group_cleanup() {
   log "=== Grupo: Limpieza del Sistema ==="
 
@@ -382,6 +409,8 @@ function main() {
   if ask_user "¿Configurar Herramientas de Desarrollo y Shell?"; then
     group_dev_tools
   fi
+
+  group_browser_hardening
 
   group_network_security
 
