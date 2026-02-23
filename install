@@ -103,7 +103,7 @@ function group_core_system() {
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev \
     liblzma-dev make gcc ripgrep fd-find unzip xclip \
     python3-venv python3-pip npm pipx wget ncdu \
-    libimage-exiftool-perl imagemagick rsyslog"
+    libimage-exiftool-perl imagemagick rsyslog rsync"
 
   run_install "Dependencias Core" "sudo apt install -y $core_pkgs"
 }
@@ -180,20 +180,60 @@ function group_gui_apps() {
   fi
 }
 
-function group_network_vpn() {
-  log "=== Grupo: Red y VPN ==="
+function group_network_security() {
+  log "=== Grupo: Red, VPN y Seguridad ==="
 
-  if ask_user "¿Instalar Surfshark VPN?"; then
-    if ! command -v surfshark-vpn &>/dev/null; then
-      # Bypass del script oficial para cumplir con estándares modernos de APT (evita apt-key)
-      local cmd_surfshark="sudo mkdir -p /etc/apt/keyrings && \
-        wget -qO- https://ocean.surfshark.com/debian/pubkey.gpg | sudo tee /etc/apt/keyrings/surfshark.asc > /dev/null && \
-        echo 'deb [signed-by=/etc/apt/keyrings/surfshark.asc] https://ocean.surfshark.com/debian stretch main' | sudo tee /etc/apt/sources.list.d/surfshark.list > /dev/null && \
-        sudo apt update && sudo apt install -y surfshark-vpn"
+  # 1. Herramientas Base de Seguridad y Acceso Remoto
+  if ask_user "¿Instalar y configurar SSH, Fail2ban, UFW y sshpass?"; then
+    run_install "Paquetes de Seguridad" "sudo apt install -y openssh-server fail2ban ufw sshpass"
 
-      run_install "Surfshark VPN" "$cmd_surfshark"
+    # Configuración de UFW (Firewall) - Reglas seguras por defecto
+    local cmd_ufw="sudo ufw default deny incoming && \
+                   sudo ufw default allow outgoing && \
+                   sudo ufw allow ssh/tcp && \
+                   sudo ufw --force enable"
+    run_install "Configuración UFW" "$cmd_ufw"
+
+    # Habilitar servicios críticos
+    run_install "Servicios SSH/Fail2ban" "sudo systemctl enable --now ssh fail2ban"
+  fi
+
+  # 2. VPN Comercial (Paquetes nativos en lugar de la App privativa)
+  if ask_user "¿Instalar soporte nativo para OpenVPN/WireGuard?"; then
+    run_install "OpenVPN & WireGuard" "sudo apt install -y openvpn wireguard network-manager-openvpn resolvconf"
+    log "Nota: Descarga tus archivos .ovpn o .conf desde la web de tu VPN y úsalos con NetworkManager."
+  fi
+
+  # 3. Tailscale
+  if ask_user "¿Instalar Tailscale (Mesh VPN)?"; then
+    if ! command -v tailscale &>/dev/null; then
+      # Tailscale provee un script de instalación muy robusto y seguro
+      run_install "Tailscale" "curl -fsSL https://tailscale.com/install.sh | sh"
+      log "Tailscale instalado. Ejecuta 'sudo tailscale up' al finalizar para autenticarte."
     else
-      log "Surfshark ya instalado."
+      log "Tailscale ya está instalado."
+    fi
+  fi
+}
+
+function group_docker() {
+  log "=== Grupo: Contenedores (Docker) ==="
+
+  if ask_user "¿Instalar y configurar Docker Engine?"; then
+    if ! command -v docker &>/dev/null; then
+      local cmd_docker="sudo install -m 0755 -d /etc/apt/keyrings && \
+        sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+        sudo chmod a+r /etc/apt/keyrings/docker.asc && \
+        echo \"deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \$(. /etc/os-release && echo \"\$VERSION_CODENAME\") stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null && \
+        sudo apt update && \
+        sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin && \
+        sudo usermod -aG docker \"\$(whoami)\""
+
+      if run_install "Docker Engine" "$cmd_docker"; then
+        log "Usuario añadido al grupo 'docker'. (Requerirá reiniciar sesión para surtir efecto)."
+      fi
+    else
+      log "Docker ya está instalado."
     fi
   fi
 }
@@ -240,6 +280,7 @@ function group_dev_tools() {
   if ask_user "¿Instalar Extras (Lazygit, Visidata)?"; then
     run_install "Lazygit" "sudo apt install -y lazygit"
     run_install "Visidata" "pipx ensurepath && pipx install visidata --include-deps"
+    run_install "Zathura + MuPDF" "sudo apt install zathura zathura-pdf-poppler"
   fi
 }
 
@@ -248,18 +289,20 @@ function group_dotfiles() {
 
   if ask_user "¿Aplicar Dotfiles desde $DOTFILES_DIR?"; then
     if [[ -d "$DOTFILES_DIR" ]]; then
+      # Asegurar que rsync está instalado para sincronización exacta
+      sudo apt install -y rsync &>/dev/null
+
       local cmd_dot=""
 
-      # Prevención de fusión (Merge): Borrar destino antes de copiar
+      # 1. Sincronización exacta de Wallpaper (Elimina lo que no esté en origen)
       if [[ -d "$DOTFILES_DIR/wallpaper" ]]; then
-        # Eliminamos versiones en minúscula y mayúscula por si acaso
-        cmd_dot="rm -rf \"$HOME/wallpaper\" \"$HOME/Wallpaper\" && "
+        cmd_dot="mkdir -p \"$HOME/wallpaper\" && rsync -a --delete \"$DOTFILES_DIR/wallpaper/\" \"$HOME/wallpaper/\" && "
       fi
 
-      # Copia recursiva preservando atributos (-a)
-      cmd_dot="${cmd_dot}cp -a \"$DOTFILES_DIR/.\" \"$HOME/\""
+      # 2. Copia del resto de dotfiles (ignorando la carpeta wallpaper para no duplicar procesos)
+      cmd_dot="${cmd_dot}rsync -a --exclude='wallpaper' \"$DOTFILES_DIR/\" \"$HOME/\""
 
-      run_install "Dotfiles Apply" "$cmd_dot"
+      run_install "Dotfiles Sincronización (rsync)" "$cmd_dot"
     else
       error "Directorio dotfiles no encontrado. Saltando."
       FAILED_PACKAGES+=("Dotfiles (Dir not found)")
@@ -315,13 +358,15 @@ function main() {
     group_virtualization
   fi
 
-  group_gui_apps # Las preguntas individuales están dentro
+  group_docker
+
+  group_gui_apps
 
   if ask_user "¿Configurar Herramientas de Desarrollo y Shell?"; then
     group_dev_tools
   fi
 
-  group_network_vpn
+  group_network_security
 
   group_dotfiles
 

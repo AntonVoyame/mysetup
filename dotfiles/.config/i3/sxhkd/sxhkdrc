@@ -20,11 +20,11 @@ super + z
 
 # Launch File Manager (Thunar)
 super + f
-	thunar
+	ranger
 
 # Launch Text Editor (Geany)
 super + n
-geany
+nano
 
 # Launch Sync Notes (Dropbox)
 super + g

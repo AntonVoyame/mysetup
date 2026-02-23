@@ -1,0 +1,26 @@
+# === COMPORTAMIENTO BASE ===
+# Ajustar el PDF al ancho de la ventana automáticamente al abrir
+set adjust-open "best-fit"
+
+# === PORTAPAPELES ===
+# Sincroniza la selección de texto de Zathura con el portapapeles global del sistema (Ctrl+C / Ctrl+V)
+set selection-clipboard clipboard
+
+# === MODO OSCURO (RECOLOR) ===
+# Permite invertir los colores (Fondo oscuro, letras claras)
+# Puedes forzar que siempre abra en modo oscuro descomentando la siguiente línea:
+# set recolor true
+
+# Ajustar los tonos del modo oscuro para que no sea un blanco/negro puro (descansa la vista)
+set recolor-darkcolor "#D8DEE9"  # Color del texto (gris claro)
+set recolor-lightcolor "#2E3440" # Color del fondo (gris oscuro/azulado)
+
+# === ATAJOS PERSONALIZADOS ===
+# Mapear la tecla 'i' para activar/desactivar el modo oscuro rápidamente
+map i recolor
+
+# Mapear 'r' para recargar el documento manualmente (útil si el archivo cambió)
+map r reload
+
+# Mapear 'R' para rotar la página
+map R rotate
