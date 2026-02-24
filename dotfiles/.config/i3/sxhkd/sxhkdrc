@@ -18,11 +18,11 @@ super + shift + Return
 super + z
    	rofi -show drun -modi drun -line-padding 4 -hide-scrollbar -show-icons -theme ~/.config/i3/rofi/config.rasi
 
-# Launch File Manager (Thunar)
+# Launch File Manager (Ranger)
 super + f
-	ranger
+	westerm -e ranger
 
-# Launch Text Editor (Geany)
+# Launch Text Editor (Nano)
 super + n
 nano
 
