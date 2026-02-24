@@ -5,7 +5,7 @@
 lxpolkit &
 dunst -config ~/.config/i3/dunst/dunstrc &
 picom --config ~/.config/i3/picom/picom.conf --animations -b &
-feh --bg-fill ~/.config/i3/wallpaper/13.jpeg &
+feh --bg-fill ~/.config/i3/wallpaper/13.jpg &
 
 # sxhkd
 pkill -x sxhkd

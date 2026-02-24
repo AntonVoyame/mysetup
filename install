@@ -125,8 +125,43 @@ function group_virtualization() {
   run_install "KVM/QEMU" "$cmd"
 }
 
+function group_flatpak_notes() {
+  log "=== Grupo: Gestión de Notas y Nube (Flatpak) ==="
+
+  if ask_user "¿Instalar Obsidian y Dropbox (vía Flatpak)?"; then
+    log "Configurando motor Flatpak y Flathub..."
+
+    # 1. Asegurar que el gestor Flatpak esté instalado
+    if ! command -v flatpak &>/dev/null; then
+      run_install "Gestor Flatpak" "sudo apt install -y flatpak"
+    fi
+
+    # 2. Asegurar que el repositorio oficial Flathub esté activo
+    local cmd_flathub="sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
+    run_install "Repositorio Flathub" "$cmd_flathub"
+
+    # 3. Instalar Obsidian
+    if ! flatpak list | grep -q md.obsidian.Obsidian; then
+      local cmd_obsidian="sudo flatpak install -y flathub md.obsidian.Obsidian"
+      run_install "Obsidian (Flatpak)" "$cmd_obsidian"
+    else
+      log "Obsidian ya está instalado vía Flatpak."
+    fi
+
+    # 4. Instalar Dropbox
+    if ! flatpak list | grep -q com.dropbox.Client; then
+      local cmd_dropbox="sudo flatpak install -y flathub com.dropbox.Client"
+      run_install "Dropbox (Flatpak)" "$cmd_dropbox"
+    else
+      log "Dropbox ya está instalado vía Flatpak."
+    fi
+
+    log "Nota (SysAdmin): Si usas rofi o dmenu, reinicia tu sesión de i3 al terminar para que detecten los accesos directos de Flatpak."
+  fi
+}
+
 function group_gui_apps() {
-  log "=== Grupo: Aplicaciones Gráficas ==="
+  log "=== Grupo: Aplicaciones Gráficas Accesorias ==="
 
   # Visual Studio Code
   if ask_user "¿Instalar Visual Studio Code?"; then
@@ -139,45 +174,6 @@ function group_gui_apps() {
       run_install "VSCode" "$cmd_vscode"
     else
       log "VSCode ya instalado."
-    fi
-  fi
-
-  # Dropbox
-
-  if ask_user "¿Instalar Dropbox?"; then
-    if ! command -v dropbox &>/dev/null; then
-      # Instalamos el .deb y borramos la fuente (source list) rota que genera para Debian 13
-      local cmd_dropbox="wget -O dropbox.deb 'https://www.dropbox.com/download?dl=packages/ubuntu/dropbox_2024.04.17_amd64.deb' && \
-                         sudo apt install -y ./dropbox.deb && \
-                         rm dropbox.deb && \
-                         sudo rm -f /etc/apt/sources.list.d/dropbox.list"
-
-      run_install "Dropbox (Fijado para Debian 13)" "$cmd_dropbox"
-    else
-      log "Dropbox ya instalado."
-    fi
-  fi
-
-  # Obsidian
-
-  if ask_user "¿Instalar Obsidian (vía Flatpak)?"; then
-    log "Configurando motor Flatpak para Obsidian..."
-
-    # 1. Asegurar que el gestor Flatpak esté instalado
-    if ! command -v flatpak &>/dev/null; then
-      run_install "Gestor Flatpak" "sudo apt install -y flatpak"
-    fi
-
-    # 2. Asegurar que el repositorio oficial Flathub esté activo
-    local cmd_flathub="sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
-    run_install "Repositorio Flathub" "$cmd_flathub"
-
-    # 3. Instalar Obsidian de forma desatendida
-    if ! flatpak list | grep -q md.obsidian.Obsidian; then
-      local cmd_obsidian_flatpak="sudo flatpak install -y flathub md.obsidian.Obsidian"
-      run_install "Obsidian (Flatpak)" "$cmd_obsidian_flatpak"
-    else
-      log "Obsidian (Flatpak) ya está instalado."
     fi
   fi
 
@@ -317,25 +313,21 @@ function group_browser_hardening() {
   log "=== Grupo: Hardening de Navegador (Arkenfox) ==="
 
   if ask_user "¿Instalar y configurar Arkenfox user.js en Firefox?"; then
-    # 1. Aseguramos que Firefox esté instalado (Debian suele usar firefox-esr)
+    # 1. Aseguramos que Firefox esté instalado
     sudo apt install -y firefox-esr &>/dev/null || sudo apt install -y firefox &>/dev/null
 
-    # 2. Forzamos la creación del perfil sin abrir ventanas y descargamos el repo
+    # 2. Comando a prueba de balas (Manejo de Race Conditions y variables de entorno)
     local cmd_arkenfox="mkdir -p \"$HOME/.mozilla/firefox\" && \
-      if ! grep -q 'Path=' \"$HOME/.mozilla/firefox/profiles.ini\" 2>/dev/null; then \
-        firefox --headless -CreateProfile \"default\" &>/dev/null || true; \
-      fi && \
-      PROFILE_DIR=\$(find \"$HOME/.mozilla/firefox\" -maxdepth 1 -type d -name \"*.default*\" | head -n 1) && \
-      if [[ -n \"\$PROFILE_DIR\" ]]; then \
-        wget -qO \"\$PROFILE_DIR/user.js\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/user.js\" && \
-        wget -qO \"\$PROFILE_DIR/updater.sh\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/updater.sh\" && \
-        chmod +x \"\$PROFILE_DIR/updater.sh\"; \
-      else \
-        exit 1; \
-      fi"
+      killall firefox firefox-esr &>/dev/null || true && \
+      timeout 5s firefox --headless &>/dev/null || true && \
+      find \"$HOME/.mozilla/firefox\" -maxdepth 1 -type d -name \"*.default*\" | while read -r profile; do \
+        wget -qO \"\$profile/user.js\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/user.js\" && \
+        wget -qO \"\$profile/updater.sh\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/updater.sh\" && \
+        chmod +x \"\$profile/updater.sh\"; \
+      done"
 
-    if run_install "Arkenfox user.js" "$cmd_arkenfox"; then
-      log "Arkenfox aplicado. Ejecuta ./updater.sh dentro de tu perfil de Firefox para futuras actualizaciones."
+    if run_install "Arkenfox user.js (Inyección Dinámica)" "$cmd_arkenfox"; then
+      log "Arkenfox aplicado exitosamente en los perfiles detectados."
     fi
   fi
 }
@@ -403,6 +395,8 @@ function main() {
   fi
 
   group_docker
+
+  group_flatpak_notes
 
   group_gui_apps
 
