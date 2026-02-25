@@ -1,9 +1,7 @@
 #!/bin/bash
 #
 # Script de instalación y configuración de entorno de trabajo.
-# Basado en Debian/Ubuntu.
-# Adhiere a Google Shell Style Guide y Principios SRE.
-
+# Basado en Debian/Ubuntu. Adhiere a Google Shell Style Guide y Principios SRE.
 # --- CONFIGURACIÓN DE SEGURIDAD ---
 set -uo pipefail
 
@@ -26,9 +24,7 @@ function log() {
   local timestamp
   local message="$1"
   timestamp=$(date +'%Y-%m-%d %H:%M:%S')
-  # Imprimir en log file
   echo "[$timestamp] INFO: $message" >>"$LOG_FILE"
-  # Imprimir en pantalla
   echo -e "${BLUE}[INFO]${NC} $message"
 }
 
@@ -50,7 +46,6 @@ function check_root() {
     error "Este script requiere privilegios sudo. Verifica tus credenciales."
     exit 1
   fi
-  # Mantener sudo vivo en background
   (while true; do
     sudo -n true
     sleep 60
@@ -58,15 +53,12 @@ function check_root() {
   done 2>/dev/null) &
 }
 
-# Wrapper para ejecutar comandos, loguear y registrar estado
-# Uso: run_install "Nombre Mostrado" "comando_a_ejecutar"
 function run_install() {
   local pkg_name="$1"
   local cmd="$2"
 
   log "Instalando: $pkg_name..."
 
-  # Ejecutamos el comando capturando stderr y stdout para el log
   if eval "$cmd" >>"$LOG_FILE" 2>&1; then
     success "$pkg_name instalado correctamente."
     INSTALLED_PACKAGES+=("$pkg_name")
@@ -81,7 +73,6 @@ function run_install() {
 function ask_user() {
   local prompt="$1"
   local response
-
   read -p "$(echo -e "${YELLOW}$prompt [s/N]: ${NC}")" response
   if [[ "$response" =~ ^[sS]$ ]]; then
     return 0
@@ -94,8 +85,6 @@ function ask_user() {
 
 function group_core_system() {
   log "=== Grupo: Sistema Base y Dependencias ==="
-
-  # Actualización inicial
   run_install "System Update" "sudo apt update && sudo apt upgrade -y"
 
   local core_pkgs="build-essential libssl-dev zlib1g-dev libbz2-dev \
@@ -103,14 +92,101 @@ function group_core_system() {
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev \
     liblzma-dev make gcc ripgrep fd-find unzip xclip \
     python3-venv python3-pip npm pipx wget ncdu \
-    libimage-exiftool-perl imagemagick rsyslog rsync"
+    libimage-exiftool-perl imagemagick rsyslog rsync zsh zsh-syntax-highlighting zsh-autosuggestions"
 
   run_install "Dependencias Core" "sudo apt install -y $core_pkgs"
+
+  if [ "$SHELL" != "/usr/bin/zsh" ]; then
+    run_install "Cambio a ZSH" "chsh -s $(which zsh)"
+  fi
+}
+
+function group_i3_desktop() {
+  log "=== Grupo: Entorno Gráfico (i3wm & LightDM) ==="
+
+  if ask_user "¿Instalar entorno gráfico (Xorg, i3wm, LightDM y utilidades)?"; then
+    local cmd_base="sudo DEBIAN_FRONTEND=noninteractive apt install -y xorg xbacklight xbindkeys xinput i3 i3blocks i3lock lightdm"
+    run_install "Xorg, i3wm y LightDM" "$cmd_base"
+    run_install "Servicio LightDM" "sudo systemctl enable lightdm"
+
+    local cmd_utils="sudo apt install -y polybar sxhkd picom feh dunst lxpolkit rofi flameshot libnotify-bin fonts-font-awesome fonts-recommended"
+    run_install "Utilidades i3 y Fuentes" "$cmd_utils"
+
+    local cmd_apps="sudo apt install -y ranger qimgv pulsemixer pamixer gsimplecal pavucontrol mpv lxappearance galculator pipewire pipewire-audio pipewire-pulse wireplumber"
+    run_install "Apps GUI/CLI y Servidor de Audio" "$cmd_apps"
+
+    local cmd_dirs="mkdir -p \"$HOME/.config/i3/scripts\" \
+                             \"$HOME/.config/i3/polybar\" \
+                             \"$HOME/.config/i3/sxhkd\" \
+                             \"$HOME/.config/i3/picom\" \
+                             \"$HOME/.config/i3/dunst\" \
+                             \"$HOME/.config/i3/rofi\" \
+                             \"$HOME/.config/i3/wallpaper\" \
+                             \"$HOME/.config/qimgv\" \
+                             \"$HOME/Screenshots\""
+    run_install "Estructura de directorios" "$cmd_dirs"
+  fi
+}
+
+function group_appearance() {
+  log "=== Grupo: Apariencia (Nerd Fonts y Temas GTK) ==="
+
+  if ask_user "¿Instalar fuentes (Nerd Fonts) y temas (Orchis/Colloid)?"; then
+    # 1. Instalar Nerd Fonts (Sólo las requeridas por tu config de Polybar/Terminal)
+    local font_dir="$HOME/.local/share/fonts"
+    mkdir -p "$font_dir"
+    local fonts=("JetBrainsMono" "RobotoMono" "Hack")
+
+    for font in "${fonts[@]}"; do
+      if [ ! -d "$font_dir/$font" ]; then
+        local cmd_font="wget -qO /tmp/${font}.zip https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/${font}.zip && \
+                        unzip -qo /tmp/${font}.zip -d \"$font_dir/$font/\" && \
+                        rm /tmp/${font}.zip"
+        run_install "Nerd Font: $font" "$cmd_font"
+      fi
+    done
+    run_install "Actualizar caché de fuentes" "fc-cache -f"
+
+    # 2. Instalar Temas GTK e Iconos
+    local theme_cmd="mkdir -p /tmp/themes_install && cd /tmp/themes_install && \
+      git clone -q --depth 1 https://github.com/vinceliuice/Orchis-theme && \
+      cd Orchis-theme && yes | ./install.sh -l -c dark -t grey --tweaks black && \
+      cd /tmp/themes_install && git clone -q --depth 1 https://github.com/vinceliuice/Colloid-icon-theme && \
+      cd Colloid-icon-theme && ./install.sh -t grey -s dracula && \
+      rm -rf /tmp/themes_install"
+
+    run_install "Temas Orchis & Colloid" "$theme_cmd"
+
+    # 3. Aplicar temas automáticamente
+    local apply_cmd="mkdir -p ~/.config/gtk-3.0 && \
+      echo -e '[Settings]\ngtk-theme-name=Orchis-Grey-Dark\ngtk-icon-theme-name=Colloid-Grey-Dracula-Dark\ngtk-font-name=Sans 10\ngtk-cursor-theme-name=Adwaita\ngtk-xft-antialias=1\ngtk-xft-hinting=1\ngtk-xft-hintstyle=hintfull' > ~/.config/gtk-3.0/settings.ini && \
+      echo -e 'gtk-theme-name=\"Orchis-Grey-Dark\"\ngtk-icon-theme-name=\"Colloid-Grey-Dracula-Dark\"\ngtk-font-name=\"Sans 10\"\ngtk-cursor-theme-name=\"Adwaita\"\ngtk-xft-antialias=1\ngtk-xft-hinting=1\ngtk-xft-hintstyle=\"hintfull\"' > ~/.gtkrc-2.0 && \
+      gsettings set org.gnome.desktop.interface gtk-theme 'Orchis-Grey-Dark' && \
+      gsettings set org.gnome.desktop.interface icon-theme 'Colloid-Grey-Dracula-Dark'"
+
+    run_install "Aplicar Configuración GTK" "$apply_cmd"
+  fi
+}
+
+function group_wezterm() {
+  log "=== Grupo: Terminal (WezTerm) ==="
+  if ask_user "¿Instalar WezTerm?"; then
+    if ! command -v wezterm &>/dev/null; then
+      local cmd_wez="curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg && \
+        echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list > /dev/null && \
+        sudo apt update && sudo apt install -y wezterm && \
+        sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/wezterm 50 && \
+        sudo update-alternatives --set x-terminal-emulator /usr/bin/wezterm"
+
+      run_install "WezTerm" "$cmd_wez"
+    else
+      log "WezTerm ya está instalado."
+    fi
+  fi
 }
 
 function group_virtualization() {
   log "=== Grupo: Virtualización (KVM/QEMU) ==="
-
   if dpkg -l | grep -q qemu-system; then
     log "KVM ya parece estar instalado."
     INSTALLED_PACKAGES+=("KVM (Preexistente)")
@@ -121,73 +197,34 @@ function group_virtualization() {
              sudo systemctl enable --now libvirtd && \
              sudo usermod -aG libvirt \"$(whoami)\" && \
              sudo usermod -aG kvm \"$(whoami)\""
-
   run_install "KVM/QEMU" "$cmd"
 }
 
 function group_flatpak_notes() {
-  log "=== Grupo: Gestión de Notas y Nube (Flatpak) ==="
-
-  if ask_user "¿Instalar Obsidian y Dropbox (vía Flatpak)?"; then
-    log "Configurando motor Flatpak y Flathub..."
-
-    # 1. Asegurar que el gestor Flatpak esté instalado
+  log "=== Grupo: Flatpaks (Obsidian, Dropbox, Discord) ==="
+  if ask_user "¿Instalar Aplicaciones Flatpak (Obsidian, Dropbox, Discord)?"; then
     if ! command -v flatpak &>/dev/null; then
       run_install "Gestor Flatpak" "sudo apt install -y flatpak"
     fi
-
-    # 2. Asegurar que el repositorio oficial Flathub esté activo
     local cmd_flathub="sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo"
     run_install "Repositorio Flathub" "$cmd_flathub"
 
-    # 3. Instalar Obsidian
     if ! flatpak list | grep -q md.obsidian.Obsidian; then
-      local cmd_obsidian="sudo flatpak install -y flathub md.obsidian.Obsidian"
-      run_install "Obsidian (Flatpak)" "$cmd_obsidian"
-    else
-      log "Obsidian ya está instalado vía Flatpak."
+      run_install "Obsidian (Flatpak)" "sudo flatpak install -y flathub md.obsidian.Obsidian"
     fi
 
-    # 4. Instalar Dropbox
     if ! flatpak list | grep -q com.dropbox.Client; then
-      local cmd_dropbox="sudo flatpak install -y flathub com.dropbox.Client"
-      run_install "Dropbox (Flatpak)" "$cmd_dropbox"
-    else
-      log "Dropbox ya está instalado vía Flatpak."
+      run_install "Dropbox (Flatpak)" "sudo flatpak install -y flathub com.dropbox.Client"
     fi
 
-    log "Nota (SysAdmin): Si usas rofi o dmenu, reinicia tu sesión de i3 al terminar para que detecten los accesos directos de Flatpak."
-  fi
-}
-
-function group_gui_apps() {
-  log "=== Grupo: Aplicaciones Gráficas Accesorias ==="
-
-  # Visual Studio Code
-  if ask_user "¿Instalar Visual Studio Code?"; then
-    if ! command -v code &>/dev/null; then
-      local cmd_vscode="wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg && \
-        sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg && \
-        rm packages.microsoft.gpg && \
-        echo 'deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main' | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null && \
-        sudo apt update && sudo apt install -y code"
-      run_install "VSCode" "$cmd_vscode"
-    else
-      log "VSCode ya instalado."
-    fi
-  fi
-
-  # Zoom
-  if ask_user "¿Instalar Zoom?"; then
-    if ! dpkg -l | grep -q zoom; then
-      run_install "Zoom" "wget -O zoom.deb https://zoom.us/client/latest/zoom_amd64.deb && sudo apt install -y ./zoom.deb && rm zoom.deb"
+    if ! flatpak list | grep -q com.discordapp.Discord; then
+      run_install "Discord (Flatpak)" "sudo flatpak install -y flathub com.discordapp.Discord"
     fi
   fi
 }
 
 function group_network_security() {
   log "=== Grupo: Red, VPN y Seguridad ==="
-
   if ask_user "¿Instalar y configurar SSH, Fail2ban, UFW y sshpass?"; then
     run_install "Paquetes de Seguridad" "sudo apt install -y openssh-server fail2ban ufw sshpass"
 
@@ -199,17 +236,14 @@ function group_network_security() {
     run_install "Servicios SSH/Fail2ban" "sudo systemctl enable --now ssh fail2ban"
   fi
 
-  # 2. Tailscale (Movido arriba para garantizar resolución DNS limpia)
   if ask_user "¿Instalar Tailscale (Mesh VPN)?"; then
     if ! command -v tailscale &>/dev/null; then
       run_install "Tailscale" "curl -fsSL https://tailscale.com/install.sh | sh"
-      log "Tailscale instalado. Ejecuta 'sudo tailscale up' al finalizar."
     else
       log "Tailscale ya está instalado."
     fi
   fi
 
-  # 3. VPN Nativa (Sin resolvconf para no romper el DNS al vuelo)
   if ask_user "¿Instalar soporte nativo para OpenVPN/WireGuard?"; then
     run_install "OpenVPN & WireGuard" "sudo apt install -y openvpn wireguard network-manager-openvpn"
   fi
@@ -217,7 +251,6 @@ function group_network_security() {
 
 function group_docker() {
   log "=== Grupo: Contenedores (Docker) ==="
-
   if ask_user "¿Instalar y configurar Docker Engine?"; then
     if ! command -v docker &>/dev/null; then
       local cmd_docker="sudo install -m 0755 -d /etc/apt/keyrings && \
@@ -239,22 +272,11 @@ function group_docker() {
 
 function group_dev_tools() {
   log "=== Grupo: Herramientas de Desarrollo (Shell/Nvim) ==="
-
   if ask_user "¿Configurar entorno Shell (ZSH/Starship/Pyenv)?"; then
-    # ZSH & Direnv
-    run_install "ZSH Setup" "touch \"$HOME/.zshrc\" && sudo apt install -y direnv"
-
-    # Agregar hook de direnv si no existe
-    if ! grep -q "direnv hook zsh" "$HOME/.zshrc"; then
-      echo 'eval "$(direnv hook zsh)"' >>"$HOME/.zshrc"
-    fi
-
-    # Pyenv
+    run_install "Direnv" "sudo apt install -y direnv"
     if [[ ! -d "$HOME/.pyenv" ]]; then
       run_install "Pyenv" "curl https://pyenv.run | bash"
     fi
-
-    # Starship
     if ! command -v starship &>/dev/null; then
       run_install "Starship" "curl -sS https://starship.rs/install.sh | sh -s -- -y"
     fi
@@ -268,7 +290,6 @@ function group_dev_tools() {
       rm nvim-linux-x86_64.tar.gz"
 
     if run_install "Neovim Binary" "$cmd_nvim"; then
-      # Configurar LazyVim
       if [[ -d "$HOME/.config/nvim" ]]; then
         mv "$HOME/.config/nvim" "$HOME/.config/nvim.bak.$(date +%s)"
       fi
@@ -285,23 +306,13 @@ function group_dev_tools() {
 
 function group_dotfiles() {
   log "=== Grupo: Dotfiles ==="
-
   if ask_user "¿Aplicar Dotfiles desde $DOTFILES_DIR?"; then
     if [[ -d "$DOTFILES_DIR" ]]; then
-      # Asegurar que rsync está instalado
       sudo apt install -y rsync &>/dev/null
-
-      # 1. Definir la ruta exacta del sistema destino
       local target_wallpaper_dir="$HOME/.config/i3/wallpaper"
-
-      # 2. Destrucción quirúrgica: Borrar la carpeta original de i3 completamente
       local cmd_dot="rm -rf \"$target_wallpaper_dir\" && "
-
-      # 3. Sincronización: Copiar todo el árbol de dotfiles.
-      # Como borramos la carpeta destino antes, rsync/cp pondrá tu carpeta nueva limpia.
       cmd_dot="${cmd_dot}rsync -a \"$DOTFILES_DIR/\" \"$HOME/\""
-
-      run_install "Dotfiles (Sincronización exacta i3)" "$cmd_dot"
+      run_install "Dotfiles (Sincronización)" "$cmd_dot"
     else
       error "Directorio dotfiles no encontrado. Saltando."
       FAILED_PACKAGES+=("Dotfiles (Dir not found)")
@@ -309,40 +320,11 @@ function group_dotfiles() {
   fi
 }
 
-function group_browser_hardening() {
-  log "=== Grupo: Hardening de Navegador (Arkenfox) ==="
-
-  if ask_user "¿Instalar y configurar Arkenfox user.js en Firefox?"; then
-    # 1. Aseguramos que Firefox esté instalado
-    sudo apt install -y firefox-esr &>/dev/null || sudo apt install -y firefox &>/dev/null
-
-    # 2. Comando a prueba de balas (Manejo de Race Conditions y variables de entorno)
-    local cmd_arkenfox="mkdir -p \"$HOME/.mozilla/firefox\" && \
-      killall firefox firefox-esr &>/dev/null || true && \
-      timeout 5s firefox --headless &>/dev/null || true && \
-      find \"$HOME/.mozilla/firefox\" -maxdepth 1 -type d -name \"*.default*\" | while read -r profile; do \
-        wget -qO \"\$profile/user.js\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/user.js\" && \
-        wget -qO \"\$profile/updater.sh\" \"https://raw.githubusercontent.com/arkenfox/user.js/master/updater.sh\" && \
-        chmod +x \"\$profile/updater.sh\"; \
-      done"
-
-    if run_install "Arkenfox user.js (Inyección Dinámica)" "$cmd_arkenfox"; then
-      log "Arkenfox aplicado exitosamente en los perfiles detectados."
-    fi
-  fi
-}
-
 function group_cleanup() {
   log "=== Grupo: Limpieza del Sistema ==="
-
-  if ask_user "¿Ejecutar limpieza final (remover thunar, micro, xarchiver y dependencias huérfanas)?"; then
-    # El uso de '|| true' en el primer comando evita que el bloque falle
-    # si los programas ya estaban desinstalados previamente.
-    local cmd_clean="sudo apt remove -y thunar micro xarchiver || true && \
-                     sudo apt autoremove -y && \
-                     sudo apt clean"
-
-    run_install "Limpieza de paquetes y dependencias" "$cmd_clean"
+  if ask_user "¿Ejecutar limpieza final (remover dependencias huérfanas)?"; then
+    local cmd_clean="sudo apt autoremove -y && sudo apt clean"
+    run_install "Limpieza de paquetes" "$cmd_clean"
   fi
 }
 
@@ -372,62 +354,52 @@ function print_summary() {
     done
     echo -e "\n${YELLOW}Revisa $LOG_FILE para detalles de los errores.${NC}"
   fi
-
   echo -e "${BLUE}========================================${NC}"
 }
 
 # --- EJECUCIÓN PRINCIPAL ---
 
 function main() {
-  # Inicializar log
   echo "--- Inicio de Instalación: $(date) ---" >"$LOG_FILE"
-
   echo -e "${BLUE}=== Iniciando Script de Instalación Interactivo ===${NC}"
   check_root
 
-  # Selección de grupos
   if ask_user "¿Instalar Dependencias Core del Sistema? (Recomendado)"; then
     group_core_system
   fi
+
+  group_i3_desktop
+  group_appearance
+  group_wezterm
 
   if ask_user "¿Instalar Entorno de Virtualización (KVM)?"; then
     group_virtualization
   fi
 
   group_docker
-
   group_flatpak_notes
-
-  group_gui_apps
 
   if ask_user "¿Configurar Herramientas de Desarrollo y Shell?"; then
     group_dev_tools
   fi
 
-  group_browser_hardening
-
   group_network_security
-
   group_dotfiles
 
-  # Configuración de red final (Opcional, puede desconectar al usuario)
   if ask_user "¿Desactivar gestión de red predeterminada (Networking/WPA)? (Cuidado si es remoto)"; then
     run_install "Network Disable" "sudo systemctl stop networking && sudo systemctl disable networking && sudo systemctl disable wpa_supplicant"
   fi
 
   group_cleanup
-
   print_summary
 
   echo -e "${YELLOW}Pasos manuales requeridos:${NC}"
   echo "1. Reinicia el sistema."
   echo "2. Conectate al wifi con 'nmtui' si desactivaste wpa_supplicant."
   echo "3. Ejecuta 'zsh' para inicializar la shell."
-  echo "4. Finaliza login en Dropbox, para sincronizar el vault de Obsidian."
+  echo "4. Finaliza login en Dropbox, para sincronizar el vault de Obsidian y Discord."
 }
 
-# Trap para asegurar que si se corta el script, se intente mostrar algo,
-# aunque main maneja el flujo normal.
 trap "echo 'Script finalizado.'" EXIT
 
 main "$@"
