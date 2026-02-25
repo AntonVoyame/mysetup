@@ -20,7 +20,7 @@ super + z
 
 # Launch File Manager (Ranger)
 super + f
-	westerm -e ranger
+	wezterm start -- ranger
 
 # Launch Text Editor (Nano)
 super + n
