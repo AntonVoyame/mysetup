@@ -12,6 +12,7 @@ readonly YELLOW='\033[1;33m'
 readonly BLUE='\033[0;34m'
 readonly NC='\033[0m'
 readonly LOG_FILE="$HOME/install_log.txt"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly DOTFILES_DIR="./dotfiles"
 
 # Arrays globales para el reporte final
@@ -91,13 +92,13 @@ function group_core_system() {
     libreadline-dev libsqlite3-dev curl git libncursesw5-dev \
     xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev \
     liblzma-dev make gcc ripgrep fd-find unzip xclip \
-    python3-venv python3-pip npm pipx wget ncdu \
+    python3-venv python3-pip npm pipx wget ncdu gnupg libglib2.0-bin \
     libimage-exiftool-perl imagemagick rsyslog rsync zsh zsh-syntax-highlighting zsh-autosuggestions"
 
   run_install "Dependencias Core" "sudo apt install -y $core_pkgs"
 
-  if [ "$SHELL" != "/usr/bin/zsh" ]; then
-    run_install "Cambio a ZSH" "chsh -s $(which zsh)"
+  if [[ "$SHELL" != "$(which zsh)" ]]; then
+    run_install "Cambio a ZSH" "sudo chsh -s $(which zsh) $USER"
   fi
 }
 
@@ -134,7 +135,7 @@ function group_appearance() {
   if ask_user "¿Instalar fuentes (Nerd Fonts) y temas (Orchis/Colloid)?"; then
     # 1. Instalar Nerd Fonts (Sólo las requeridas por tu config de Polybar/Terminal)
     local font_dir="$HOME/.local/share/fonts"
-    mkdir -p "$font_dir"
+    mkdir -p "$font_dir" "$HOME/.config/gtk-3.0" "$HOME/.local/share/themes" "$HOME/.local/share/icons"
     local fonts=("JetBrainsMono" "RobotoMono" "Hack")
 
     for font in "${fonts[@]}"; do
