@@ -1,0 +1,12 @@
+#!/bin/bash
+# polybar-i3
+
+# 1. Terminar instancias previas de forma segura
+killall -q polybar
+
+# 2. Esperar a que los procesos terminen (evita superposiciones)
+while pgrep -u $UID -x polybar >/dev/null; do sleep 1; done
+
+# 3. Lanzar la barra (asegúrate de que "example" sea el nombre correcto de tu barra)
+polybar -c ~/.config/i3/polybar/config.ini example &
+echo "Polybar lanzada correctamente."
