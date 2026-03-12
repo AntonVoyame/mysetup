@@ -1,0 +1,14 @@
+# Obligar a Visidata a usar la paleta básica de 16 colores (Pywal)
+options.color_default = 'normal'
+options.color_default_hdr = 'bold normal'
+options.color_column_sep = 'blue'
+options.color_key_col = 'cyan'
+options.color_hidden_col = 'black'
+options.color_selected_row = 'yellow'
+options.color_note_row = 'magenta'
+options.color_warning = 'red'
+options.color_error = 'red'
+options.color_current_row = 'reverse'
+options.color_current_col = 'bold'
+options.color_current_hdr = 'reverse bold'
+
