@@ -98,6 +98,11 @@ handle_extension() {
     exit 1
     ;;
 
+  json)
+    ~/.local/bin/rich "${FILE_PATH}" --force-terminal && exit 5
+    exit 1
+    ;;
+
   ## XLSX
   xls | xlsx)
 
@@ -124,13 +129,7 @@ handle_extension() {
     pandoc -s -t markdown -- "${FILE_PATH}" && exit 5
     ;;
 
-  ## JSON
-  json)
-    jq --color-output . "${FILE_PATH}" && exit 5
-    python -m json.tool -- "${FILE_PATH}" && exit 5
-    ;;
-
-  ## Direct Stream Digital/Transfer (DSDIFF) and wavpack aren't detected
+    ## Direct Stream Digital/Transfer (DSDIFF) and wavpack aren't detected
   ## by file(1).
   dff | dsf | wv | wvc)
     mediainfo "${FILE_PATH}" && exit 5

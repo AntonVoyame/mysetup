@@ -184,3 +184,6 @@ eval "$(direnv hook zsh)"
 # ... otras configuraciones ...
 eval "$(starship init zsh)"
 export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+
+# Importar los colores de Pywal en cada nueva terminal
+(cat ~/.cache/wal/sequences &)
